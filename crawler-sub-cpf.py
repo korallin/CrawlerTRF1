@@ -1,5 +1,6 @@
 import json
 import scrapy
+import time
 import requests
 import pandas as pd
 import unidecode
@@ -33,6 +34,7 @@ class Trf1Spider(scrapy.Spider):
 				# Armazenar informações da parte
 				user_data = dict()
 				user_data['cpf_cnpj'] = cpf_parte
+				user_data['mostrarBaixados'] = 'S'
 				user_data['secao'] = opt
 				user_data['enviar'] = 'Pesquisar'
 				user_data['nmToken'] = 'cpfCnpjParte'
@@ -58,7 +60,7 @@ class Trf1Spider(scrapy.Spider):
 
 		# Encaminha os links para o próximo parser
 		for url in p_links_to_follow:
-			url_full = 'https://processual.trf1.jus.br' + url.replace('&mostrarBaixados=S', '&mostrarBaixados=N')
+			url_full = 'https://processual.trf1.jus.br' + url.replace('&mostrarBaixados=S', '&mostrarBaixados=S')
 			yield response.follow(url=url_full, callback=self.parse_second, cb_kwargs=dict(metadata=user_data))
 
 	def parse_second(self, response, metadata):
@@ -141,22 +143,25 @@ class Trf1Spider(scrapy.Spider):
 
 if __name__ == '__main__':
 
+	# Start time
+	st = time.time()
+
 	# List to save the output_data collected
 	results_list = list()
 
-	# url = 'https://processual.trf1.jus.br/consultaProcessual/index.php?secao=TRF1'
-	# req_s = requests.get(url)
-	# soup = BeautifulSoup(req_s.content, 'html.parser')
-	#
-	# # Lista com as opções de seção/subseção
-	# opts = [s.get('value') for s in soup.select('select.consulta option') if len(s.get('value')) > 0]
-	# opts = list(dict.fromkeys(opts))
-	# opts = opts[1:]
+	url = 'https://processual.trf1.jus.br/consultaProcessual/index.php?secao=TRF1'
+	req_s = requests.get(url)
+	soup = BeautifulSoup(req_s.content, 'html.parser')
+
+	# Lista com as opções de seção/subseção
+	opts = [s.get('value') for s in soup.select('select.consulta option') if len(s.get('value')) > 0]
+	opts = list(dict.fromkeys(opts))
+	opts = opts[1:]
 
 	# Caso queira explorar todas as subseções
 	# Descomentar as linhas 147-154
 	# E comentar a linha abaixo
-	opts = ['DF', 'GO', 'MG']
+	#opts = ['DF', 'GO', 'MG']
 
 	# Initiate a CrawlerProcess
 	process = CrawlerProcess()
@@ -170,3 +175,8 @@ if __name__ == '__main__':
 	# Save the list of dicts
 	with open('output_data/results-sub-cpf.json', 'w', encoding='utf8') as f:
 		json.dump(results_list, f, ensure_ascii=False)
+
+	# Finish time
+	ft = time.time()
+
+	print('Tempo Total de Execução: {:.2f} segundos'.format(ft - st))

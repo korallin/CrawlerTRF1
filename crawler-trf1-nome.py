@@ -1,5 +1,6 @@
 import re
 import json
+import time
 import scrapy
 import pandas as pd
 from scrapy.crawler import CrawlerProcess
@@ -32,6 +33,7 @@ class Trf1Spider(scrapy.Spider):
 				# Armazenar informações da parte
 				user_data = dict()
 				user_data['nome'] = nome_parte
+				user_data['mostrarBaixados'] = 'S'
 				user_data['secao'] = opt
 				user_data['enviar'] = 'Pesquisar'
 				user_data['nmToken'] = 'nomeParte'
@@ -46,30 +48,30 @@ class Trf1Spider(scrapy.Spider):
 
 		user_data = metadata.copy()
 
-		p_links = response.css('tbody > tr:nth-of-type(1) > td > a.listar-processo::attr(href)')
-		p_name = response.css('tbody > tr:nth-of-type(1) > td > a.listar-processo::text').get()
-
-		if p_name is not None:
-
-			# Obter Nome
-			user_data['nome_parte'] = p_name
-
-			# Obter CPF
-			pattern = "vaivai=(.*?)\&"
-			p_cpf = re.search(pattern, p_links.extract_first()).group(1)
-			p_cpf = p_cpf.zfill(11)
-			user_data['cpf_cnpj'] = p_cpf
+		p_links = response.css('a.listar-processo ::attr(href)')
+		p_names = response.css('a.listar-processo::text').extract()
 
 		# Extrair os links (lista de strings)
 		p_links_to_follow = p_links.extract()
 
 		# Encaminha os links para o próximo parser
-		for url in p_links_to_follow:
-			url_full = 'https://processual.trf1.jus.br' + url.replace('&mostrarBaixados=S', '&mostrarBaixados=N')
-			url_edit = url_full.replace('&secao=', '&secao=' + metadata['secao'])
-			url_edit = url_edit.replace(' ', '%20')
+		for url, nome in zip(p_links_to_follow, p_names):
 
-			if user_data['nome_parte'] == metadata['nome']:
+			if nome.strip() == metadata['nome'].strip():
+
+				# Obter Nome
+				user_data['nome_parte'] = nome.strip()
+
+				# Obter CPF
+				pattern = "vaivai=(.*?)\&"
+				p_cpf = re.search(pattern, p_links.extract_first()).group(1)
+				p_cpf = p_cpf.zfill(11)
+				user_data['cpf_cnpj'] = p_cpf
+
+				url_full = 'https://processual.trf1.jus.br' + url.replace('&mostrarBaixados=S', '&mostrarBaixados=S')
+				url_edit = url_full.replace('&secao=', '&secao=' + metadata['secao'])
+				url_edit = url_edit.replace(' ', '%20')
+
 				yield response.follow(url=url_edit, callback=self.parse_second, cb_kwargs=dict(metadata=user_data))
 
 	def parse_second(self, response, metadata):
@@ -137,6 +139,9 @@ class Trf1Spider(scrapy.Spider):
 
 if __name__ == '__main__':
 
+	# Start time
+	st = time.time()
+
 	results_list = list()
 
 	opts = ['TRF1']
@@ -153,3 +158,8 @@ if __name__ == '__main__':
 	# Save the list of dicts
 	with open('output_data/results-trf1-nome.json', 'w', encoding='utf8') as f:
 		json.dump(results_list, f, ensure_ascii=False)
+
+	# Finish time
+	ft = time.time()
+
+	print('Tempo Total de Execução: {:.2f} segundos'.format(ft - st))

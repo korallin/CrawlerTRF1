@@ -1,5 +1,6 @@
 import re
 import json
+import time
 import scrapy
 import requests
 import unidecode
@@ -30,6 +31,8 @@ class Trf1Spider(scrapy.Spider):
 
 			nome_parte = str(line[0])
 
+			print (nome_parte)
+
 			for opt in opts:
 
 				# Armazenar informações da parte
@@ -37,6 +40,7 @@ class Trf1Spider(scrapy.Spider):
 				user_data['nome'] = nome_parte
 				user_data['secao'] = opt
 				user_data['enviar'] = 'Pesquisar'
+				user_data['mostrarBaixados'] = 'S'
 				user_data['nmToken'] = 'nomeParte'
 
 				data.append(user_data)
@@ -49,25 +53,28 @@ class Trf1Spider(scrapy.Spider):
 
 		user_data = metadata.copy()
 
-		p_links = response.css('tbody > tr:nth-of-type(1) > td > a.listar-processo::attr(href)')
-		p_name = response.css('tbody > tr:nth-of-type(1) > td > a.listar-processo::text').get()
-
-		if p_name is not None:
-			user_data['nome_parte'] = p_name.strip()
+		p_links = response.css('a.listar-processo ::attr(href)')
+		p_names = response.css('a.listar-processo::text').extract()
 
 		# Extrair os links (lista de strings)
 		p_links_to_follow = p_links.extract()
 
 		# Encaminha os links para o próximo parser
-		for url in p_links_to_follow:
-			url_full = 'https://processual.trf1.jus.br' + url.replace('&mostrarBaixados=S', '&mostrarBaixados=N')
-			url_edit = url_full.replace('&secao=', '&secao=' + metadata['secao'])
-			url_edit = url_edit.replace(' ', '%20')
+		for url, nome in zip(p_links_to_follow, p_names):
 
-			if user_data['nome_parte'] == metadata['nome']:
+			if nome.strip() == metadata['nome'].strip():
+
+				user_data['nome_parte'] = nome.strip()
+
+				url_full = 'https://processual.trf1.jus.br' + url.replace('&mostrarBaixados=S', '&mostrarBaixados=S')
+				url_edit = url_full.replace('&secao=', '&secao=' + metadata['secao'])
+				url_edit = url_edit.replace(' ', '%20')
+
 				yield response.follow(url=url_edit, callback=self.parse_second, cb_kwargs=dict(metadata=user_data))
 
 	def parse_second(self, response, metadata):
+
+		print (response.url)
 
 		user_data = metadata.copy()
 
@@ -143,24 +150,27 @@ class Trf1Spider(scrapy.Spider):
 
 if __name__ == '__main__':
 
+	# Start time
+	st = time.time()
+
 	url_base = 'https://processual.trf1.jus.br'
 
 	# List to save the output_data collected
 	results_list = list()
 
-	# url = 'https://processual.trf1.jus.br/consultaProcessual/index.php?secao=TRF1'
-	# req_s = requests.get(url)
-	# soup = BeautifulSoup(req_s.content, 'html.parser')
-	#
-	# # Lista com as opções de seção/subseção
-	# opts = [s.get('value') for s in soup.select('select.consulta option') if len(s.get('value')) > 0]
-	# opts = list(dict.fromkeys(opts))
-	# opts = opts[1:]
+	url = 'https://processual.trf1.jus.br/consultaProcessual/index.php?secao=TRF1'
+	req_s = requests.get(url)
+	soup = BeautifulSoup(req_s.content, 'html.parser')
+
+	# Lista com as opções de seção/subseção
+	opts = [s.get('value') for s in soup.select('select.consulta option') if len(s.get('value')) > 0]
+	opts = list(dict.fromkeys(opts))
+	opts = opts[1:]
 
 	# Caso queira explorar todas as subseções
 	# Descomentar as linhas 151-158
 	# E comentar a linha abaixo
-	opts = ['DF', 'GO', 'MG']
+	#opts = ['DF', 'GO', 'MG']
 
 	# Initiate a CrawlerProcess
 	process = CrawlerProcess()
@@ -174,3 +184,8 @@ if __name__ == '__main__':
 	# Save the list of dicts
 	with open('output_data/results-sub-nome.json', 'w', encoding='utf8') as f:
 		json.dump(results_list, f, ensure_ascii=False)
+
+	# Finish time
+	ft = time.time()
+
+	print('Tempo Total de Execução: {:.2f} segundos'.format(ft - st))

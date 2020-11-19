@@ -1,5 +1,6 @@
 import json
 import scrapy
+import time
 import pandas as pd
 from scrapy.crawler import CrawlerProcess
 from scrapy.http import FormRequest
@@ -30,6 +31,7 @@ class Trf1Spider(scrapy.Spider):
 				# Armazenar informações da parte
 				user_data = dict()
 				user_data['cpf_cnpj'] = cpf_parte
+				user_data['mostrarBaixados'] = 'S'
 				user_data['secao'] = opt
 				user_data['enviar'] = 'Pesquisar'
 				user_data['nmToken'] = 'cpfCnpjParte'
@@ -55,7 +57,7 @@ class Trf1Spider(scrapy.Spider):
 
 		# Encaminha os links para o próximo parser
 		for url in p_links_to_follow:
-			url_full = 'https://processual.trf1.jus.br' + url.replace('&mostrarBaixados=S', '&mostrarBaixados=N')
+			url_full = 'https://processual.trf1.jus.br' + url.replace('&mostrarBaixados=S', '&mostrarBaixados=S')
 			yield response.follow(url=url_full, callback=self.parse_second, cb_kwargs=dict(metadata=user_data))
 
 	def parse_second(self, response, metadata):
@@ -123,6 +125,9 @@ class Trf1Spider(scrapy.Spider):
 
 if __name__ == '__main__':
 
+	# Start time
+	st = time.time()
+
 	results_list = list()
 
 	opts = ['TRF1']
@@ -139,3 +144,8 @@ if __name__ == '__main__':
 	# Save the list of dicts
 	with open('output_data/results-trf1-cpf.json', 'w', encoding='utf8') as f:
 		json.dump(results_list, f, ensure_ascii=False)
+
+	# Finish time
+	ft = time.time()
+
+	print('Tempo Total de Execução: {:.2f} segundos'.format(ft - st))
