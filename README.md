@@ -1,4 +1,4 @@
-# CrawlerTRF1
+# Crawler Consulta Processual TRF1
 
 O repositório armazena diferentes _crawlers_ desenvolvidos para a consulta processual por Nome ou CPF no site do Tribunal Regional Federal da 1ª Região (TRF1). Simula uma busca manual no domínio https://processual.trf1.jus.br/consultaProcessual/
 
