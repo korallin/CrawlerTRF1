@@ -4,11 +4,11 @@ O repositório armazena diferentes _crawlers_ desenvolvidos para a consulta proc
 
 #### Formato de Entrada
 
-- Arquivos _.csv_ localizado em **input_data**
+- Arquivos _.csv_ localizados em **input_data**
 
 #### Formato de Saída
 
-- Arquivos _.json_ localizado em **output_data** com as informações coletadas
+- Arquivos _.json_ localizados em **output_data** com as informações coletadas
 
 #### Crawlers
 
